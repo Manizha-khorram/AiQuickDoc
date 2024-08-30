@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <Box>
-      <AppBar
+      {/* <AppBar
         position="fixed"
         sx={{ background: "transparent", backdropFilter: "blur(5px)" }}
       >
@@ -43,7 +43,7 @@ export default function Home() {
             <UserButton />
           </SignedIn>
         </Toolbar>
-      </AppBar>
+      </AppBar> */}
 
       <Head>
         <title>Centered Input</title>
@@ -53,7 +53,9 @@ export default function Home() {
         justifyContent="center"
         alignItems="center"
         minHeight="100vh"
-      ></Box>
+      >
+        <FileUploader />
+      </Box>
     </Box>
   );
 }
