@@ -10,7 +10,13 @@ function FileUploader() {
   const [message, setMessage] = useState("");
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setMessage(`Selected file: ${selectedFile.name}`);
+    } else {
+      setMessage("");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -26,7 +32,7 @@ function FileUploader() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("../api/chat", {
         method: "POST",
         body: formData,
       });

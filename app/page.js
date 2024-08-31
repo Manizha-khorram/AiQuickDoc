@@ -4,7 +4,7 @@ import Head from "next/head";
 import TextField from "@mui/material/TextField";
 import { Box, AppBar, Toolbar, Button, Typography } from "@mui/material";
 import { ClerkProvider, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import FileUploader from "./fileUploader";
+import FileUploader from "./fileUpload/page"; // Ensure this is the correct path
 
 export default function Home() {
   const [inputValue, setInputValue] = useState("");
@@ -37,7 +37,7 @@ export default function Home() {
             </Button>
           </SignedOut>
           <SignedIn>
-            <Button color="inherit" href="/flashcards" sx={{ mr: 2 }}>
+            <Button color="blue" href="/flashcards" sx={{ mr: 2 }}>
               Dashboard
             </Button>
             <UserButton />
@@ -48,12 +48,20 @@ export default function Home() {
       <Head>
         <title>Centered Input</title>
       </Head>
+
       <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
         minHeight="100vh"
-      ></Box>
+      >
+        <SignedIn>
+          <FileUploader />
+        </SignedIn>
+        <SignedOut>
+          <Typography variant="h6"> Welcome to our app</Typography>
+        </SignedOut>
+      </Box>
     </Box>
   );
 }
