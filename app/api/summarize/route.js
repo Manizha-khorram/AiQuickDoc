@@ -1,61 +1,70 @@
-import { PineconeClient } from "@pinecone-database/pinecone";
-import Groq from "groq-sdk";
+import AWS from "aws-sdk";
+import { NextRequest, NextResponse } from "next/server";
 
-const pc = new PineconeClient({
-  apiKey: process.env.PINECONE_API_KEY,
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
 });
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const index = pc.index("summeryai").namespace("ns1");
+const s3 = new AWS.S3();
 
 export async function POST(request) {
   try {
-    const { vector } = await request.json(); // Receive the vector
+    const formData = await request.formData();
+    const file = formData.get("file");
 
-    // Query Pinecone for similar data
-    const pineconeResponse = await index.query({
-      vector,
-      topK: 1, // Number of similar results to retrieve
-      includeMetadata: true,
-    });
-
-    if (!pineconeResponse.matches || pineconeResponse.matches.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "No matching data found in Pinecone",
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+    if (!file) {
+      console.error("No file uploaded");
+      return NextResponse.json(
+        { success: false, message: "No file uploaded" },
+        { status: 400 }
       );
     }
 
-    const pineconeMatch = pineconeResponse.matches[0];
-    const summaryText =
-      pineconeMatch.metadata.summary || "No summary available";
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Process summary with Groq
-    const groqQuery = `*[_type == "summary" && summary == "${summaryText}"]`;
-    const groqResult = await groq.query(groqQuery);
+    const s3Params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: `uploads/${file.name}`,
+      Body: buffer,
+      ContentType: file.type,
+    };
 
-    // Send response back to frontend
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Data processed and summarized successfully",
-        pineconeData: pineconeMatch,
-        summary: summaryText,
-        groqResult,
+    const uploadResult = await s3.upload(s3Params).promise();
+    console.log(`File uploaded to S3: ${uploadResult.Location}`);
+    // Send data to Flask
+    const response = await fetch("http://localhost:5000/summarize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        file_url: uploadResult.Location,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+    });
+
+    if (!response.ok) {
+      throw new Error("Summarization failed");
+    }
+
+    const summarizeData = await response.json();
+    console.log("Response from Flask:", summarizeData);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "File uploaded and summarized successfully",
+        summaries: summarizeData.summaries,
+        fileName: file.name,
+      },
+      { status: response.status }
     );
   } catch (error) {
     console.error("Fetch Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "An error occurred during the process",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { success: false, message: "An error occurred during the process" },
+      { status: 500 }
     );
   }
 }

@@ -26,14 +26,13 @@ export async function POST(request) {
 
     const s3Params = {
       Bucket: process.env.S3_BUCKET_NAME,
-      Key: `uploads/${file.name}`, // Corrected to use template literals with backticks
+      Key: `uploads/${file.name}`,
       Body: buffer,
       ContentType: file.type,
     };
 
     const uploadResult = await s3.upload(s3Params).promise();
-    console.log(`File uploaded to S3: ${uploadResult.Location}`); // Corrected to use template literals with backticks
-
+    console.log(`File uploaded to S3: ${uploadResult.Location}`);
     // Send data to Flask
     const response = await fetch("http://localhost:5000/upload", {
       method: "POST",
@@ -60,8 +59,10 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: true,
-        message: "File uploaded and processed successfully",
-        data,
+        message: "File uploaded successfully",
+        upload_session_id: data.upload_session_id,
+        fileName: data.fileName,
+        summaries: data.summaries,
       },
       { status: response.status }
     );
