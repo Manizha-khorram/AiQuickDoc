@@ -34,7 +34,7 @@ export async function POST(request) {
     const uploadResult = await s3.upload(s3Params).promise();
     console.log(`File uploaded to S3: ${uploadResult.Location}`);
     // Send data to Flask
-    const response = await fetch("http://localhost:5000/upload", {
+    const response = await fetch("http://localhost:5000/summarize", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -45,31 +45,25 @@ export async function POST(request) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("HTTP Error:", errorText);
-      return NextResponse.json(
-        { success: false, message: "An error occurred during the upload" },
-        { status: 500 }
-      );
+      throw new Error("Summarization failed");
     }
 
-    const data = await response.json();
-    console.log("Response from Flask:", data);
+    const summarizeData = await response.json();
+    console.log("Response from Flask:", summarizeData);
 
     return NextResponse.json(
       {
         success: true,
-        message: "File uploaded successfully",
-        upload_session_id: data.upload_session_id,
-        fileName: data.fileName,
-        summaries: data.summaries,
+        message: "File uploaded and summarized successfully",
+        summaries: summarizeData.summaries,
+        fileName: file.name,
       },
       { status: response.status }
     );
   } catch (error) {
     console.error("Fetch Error:", error);
     return NextResponse.json(
-      { success: false, message: "An error occurred during the fetch" },
+      { success: false, message: "An error occurred during the process" },
       { status: 500 }
     );
   }
