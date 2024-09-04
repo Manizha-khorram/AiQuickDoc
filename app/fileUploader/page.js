@@ -13,10 +13,10 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SummarizeIcon from "@mui/icons-material/Summarize";
-import ChatIcon from "@mui/icons-material/Chat";
 
 export default function FileUploadSummarize() {
   const [file, setFile] = useState(null);
+  const [text, setText] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [summary, setSummary] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -25,17 +25,28 @@ export default function FileUploadSummarize() {
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
+    setText("");
   };
 
-  const uploadFile = async () => {
-    if (!file) {
-      setUploadStatus("Please select a file first.");
+  const handleTextChange = (event) => {
+    setText(event.target.value);
+    setFile(null);
+  };
+
+  const uploadFileOrText = async () => {
+    if (!file && !text) {
+      setUploadStatus("Please enter text or select a file first.");
       return;
     }
 
     setIsUploading(true);
     const formData = new FormData();
-    formData.append("file", file);
+
+    if (file) {
+      formData.append("file", file);
+    } else {
+      formData.append("text", text);
+    }
 
     try {
       const response = await fetch("/api/chat", {
@@ -46,7 +57,9 @@ export default function FileUploadSummarize() {
       const data = await response.json();
 
       if (data.success) {
-        setUploadStatus("File uploaded, start chating with your PDF. ");
+        setUploadStatus(
+          "Uploaded successfully! You can now chat with your input."
+        );
         setUploadSessionId(data.upload_session_id);
       } else {
         setUploadStatus("Upload failed: " + data.message);
@@ -59,15 +72,20 @@ export default function FileUploadSummarize() {
     }
   };
 
-  const summarizeFile = async () => {
-    if (!file) {
-      setSummary("Please select a file first.");
+  const summarizeFileOrText = async () => {
+    if (!file && !text) {
+      setSummary("Please enter text or select a file first.");
       return;
     }
 
     setIsSummarizing(true);
     const formData = new FormData();
-    formData.append("file", file);
+
+    if (file) {
+      formData.append("file", file);
+    } else {
+      formData.append("text", text);
+    }
 
     try {
       const response = await fetch("/api/summarize", {
@@ -77,7 +95,6 @@ export default function FileUploadSummarize() {
 
       const data = await response.json();
 
-      console.log("data", data);
       if (data.success) {
         setSummary(data.summaries);
       } else {
@@ -94,9 +111,20 @@ export default function FileUploadSummarize() {
   return (
     <Box sx={{ maxWidth: 800, margin: "auto", p: 2 }}>
       <Card>
-        <CardHeader title="File Upload and Summarization" />
+        <CardHeader title="File Upload or Text Input and Summarization" />
         <CardContent>
           <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Enter text or choose a file"
+                multiline
+                rows={4}
+                fullWidth
+                variant="outlined"
+                value={text}
+                onChange={handleTextChange}
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 type="file"
@@ -117,11 +145,11 @@ export default function FileUploadSummarize() {
                     <CloudUploadIcon />
                   )
                 }
-                onClick={uploadFile}
-                disabled={isUploading || !file}
+                onClick={uploadFileOrText}
+                disabled={isUploading || (!file && !text)}
                 fullWidth
               >
-                Chat with your PDF
+                Chat with your Input
               </Button>
             </Grid>
             <Grid item xs={6}>
@@ -135,8 +163,8 @@ export default function FileUploadSummarize() {
                     <SummarizeIcon />
                   )
                 }
-                onClick={summarizeFile}
-                disabled={isSummarizing || !file}
+                onClick={summarizeFileOrText}
+                disabled={isSummarizing || (!file && !text)}
                 fullWidth
               >
                 Summarize

@@ -13,52 +13,72 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const text = formData.get("text");
 
-    if (!file) {
-      console.error("No file uploaded");
+    let fileUrl = "";
+    let summaryData;
+
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const s3Params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `uploads/${file.name}`,
+        Body: buffer,
+        ContentType: file.type,
+      };
+
+      const uploadResult = await s3.upload(s3Params).promise();
+      fileUrl = uploadResult.Location;
+      console.log(`File uploaded to S3: ${fileUrl}`);
+
+      // Send PDF file URL to Flask for summarization
+      const response = await fetch("http://localhost:5000/summarize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          file_url: fileUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Summarization failed");
+      }
+
+      summaryData = await response.json();
+    } else if (text) {
+      // Send text directly to Flask for summarization
+      const response = await fetch("http://localhost:5000/summarize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          text_content: text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Summarization failed");
+      }
+
+      summaryData = await response.json();
+    } else {
       return NextResponse.json(
-        { success: false, message: "No file uploaded" },
+        { success: false, message: "No file or text provided" },
         { status: 400 }
       );
     }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const s3Params = {
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: `uploads/${file.name}`,
-      Body: buffer,
-      ContentType: file.type,
-    };
-
-    const uploadResult = await s3.upload(s3Params).promise();
-    console.log(`File uploaded to S3: ${uploadResult.Location}`);
-    // Send data to Flask
-    const response = await fetch("http://localhost:5000/summarize", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        file_url: uploadResult.Location,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Summarization failed");
-    }
-
-    const summarizeData = await response.json();
-    console.log("Response from Flask:", summarizeData);
 
     return NextResponse.json(
       {
         success: true,
         message: "File uploaded and summarized successfully",
-        summaries: summarizeData.summaries,
-        fileName: file.name,
+        summaries: summaryData.summaries,
+        fileName: file ? file.name : undefined,
       },
-      { status: response.status }
+      { status: 200 }
     );
   } catch (error) {
     console.error("Fetch Error:", error);
