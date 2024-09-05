@@ -134,6 +134,37 @@ def embed_text():
     except Exception as e:
         return jsonify({"error": f"Error embedding text: {str(e)}"}), 500
 
+@app.route('/flashcards', methods=['POST'])
+def flashcards():
+    text_content = request.form.get('text_content')
+    file_url = request.form.get('file_url')
+    
+    if not file_url and not text_content:
+        return jsonify({"error": "No file URL or text provided"}), 400
+
+    try:
+        if file_url:
+            # Handle PDF file extraction
+            parsed_url = urlparse(file_url)
+            bucket_name = parsed_url.netloc.split('.')[0]
+            object_key = unquote(parsed_url.path.lstrip('/'))
+
+            response = s3.get_object(Bucket=bucket_name, Key=object_key)
+            pdf_bytes = response['Body'].read()
+
+            text_chunks = extract_text_from_pdf(pdf_bytes)
+            extracted_text = ' '.join(text_chunks)  # Combine chunks into a single string
+        else:
+            # Handle provided text directly
+            extracted_text = text_content
+        
+        return jsonify({"extracted_text": extracted_text}), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred during text extraction"}), 500
+    
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -213,6 +244,8 @@ def summarize_file():
 
     except Exception as e:
         return jsonify({"error": f"Error processing input: {str(e)}"}), 500
+    
+    
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
