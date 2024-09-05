@@ -100,6 +100,39 @@ def extract_text_from_pdf(pdf_bytes, chunk_size=1000):
     print(f"Extracted {len(text_chunks)} text chunks.")
     return text_chunks
 
+@app.route('/embed_text', methods=['POST'])
+def embed_text():
+    text = request.form.get('text')
+    
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+    
+    try:
+        # Create a unique ID for the embedding session
+        upload_session_id = str(uuid.uuid4())
+        
+        # Embed the text using the SentenceTransformer model
+        embedding = model.encode(text).tolist()
+        
+        # Store the embedding in Pinecone
+        processed_data = [{
+            "values": embedding,
+            "id": f"{upload_session_id}_text_chunk",
+            "metadata": {
+                "upload_session_id": upload_session_id,
+                "original_text": text
+            }
+        }]
+        index.upsert(vectors=processed_data, namespace="ns1")
+        
+        return jsonify({
+            "message": "Text embedded and stored successfully",
+            "upload_session_id": upload_session_id,
+            "summaries": []  # Include summaries if you generate them
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error embedding text: {str(e)}"}), 500
 
 @app.route('/flashcards', methods=['POST'])
 def flashcards():
