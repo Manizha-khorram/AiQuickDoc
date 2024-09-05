@@ -206,7 +206,7 @@ export default function FileUploadSummarize() {
                 disabled={isUploading || (!file && !text)}
                 fullWidth
               >
-                Upload
+                Chat with your file!
               </Button>
             </Grid>
             <Grid item xs={4}>
