@@ -1,3 +1,4 @@
+// This file deals with the upload function for the send button nothing more!!
 import AWS from "aws-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -100,10 +101,24 @@ export async function POST(request) {
       );
     }
 
+    const questionData = await response.json();
+    console.log("Response from Flask:", questionData);
+
+
     return NextResponse.json(
-      { success: false, message: "No text or file provided" },
-      { status: 400 }
+      {
+        success: true,
+        message: "File uploaded successfully",
+        upload_session_id: questionData.upload_session_id,
+        fileName: questionData.fileName,
+        answers: questionData.answers,
+      },
+      { status: response.status }
     );
+    
+
+    
+
   } catch (error) {
     console.error("Fetch Error:", error);
     return NextResponse.json(

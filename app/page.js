@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { ClerkProvider, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import getStripe from "@/utils/get-stripe";
-import FileUploader from "./fileUploader/page";
+import FileUploadSummarize from "./fileUpload/page";
 
 const PricingOption = ({ title, price, description, features, submitFunc }) => (
   <Zoom in={true} style={{ transitionDelay: "500ms" }}>
@@ -143,15 +143,11 @@ export default function Home() {
         display="flex"
         justifyContent="center"
         alignItems="center"
-        minHeight="100vh"
-      >
+        minHeight="100vh">
         <SignedIn>
-          <FileUploader />
+          <FileUploadSummarize />
         </SignedIn>
         <SignedOut>
-          <Typography variant="h6">Welcome to our app</Typography>
-        </SignedOut>
-      </Box>
 
       {/* Pricing Section */}
       <Box
@@ -205,6 +201,8 @@ export default function Home() {
             />
           </Grid>
         </Grid>
+      </Box>
+      </SignedOut>
       </Box>
     </Box>
   );
