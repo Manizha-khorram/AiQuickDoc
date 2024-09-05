@@ -100,39 +100,37 @@ def extract_text_from_pdf(pdf_bytes, chunk_size=1000):
     print(f"Extracted {len(text_chunks)} text chunks.")
     return text_chunks
 
-@app.route('/embed_text', methods=['POST'])
-def embed_text():
-    text = request.form.get('text')
+
+@app.route('/flashcards', methods=['POST'])
+def flashcards():
+    text_content = request.form.get('text_content')
+    file_url = request.form.get('file_url')
     
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-    
+    if not file_url and not text_content:
+        return jsonify({"error": "No file URL or text provided"}), 400
+
     try:
-        # Create a unique ID for the embedding session
-        upload_session_id = str(uuid.uuid4())
+        if file_url:
+            # Handle PDF file extraction
+            parsed_url = urlparse(file_url)
+            bucket_name = parsed_url.netloc.split('.')[0]
+            object_key = unquote(parsed_url.path.lstrip('/'))
+
+            response = s3.get_object(Bucket=bucket_name, Key=object_key)
+            pdf_bytes = response['Body'].read()
+
+            text_chunks = extract_text_from_pdf(pdf_bytes)
+            extracted_text = ' '.join(text_chunks)  # Combine chunks into a single string
+        else:
+            # Handle provided text directly
+            extracted_text = text_content
         
-        # Embed the text using the SentenceTransformer model
-        embedding = model.encode(text).tolist()
-        
-        # Store the embedding in Pinecone
-        processed_data = [{
-            "values": embedding,
-            "id": f"{upload_session_id}_text_chunk",
-            "metadata": {
-                "upload_session_id": upload_session_id,
-                "original_text": text
-            }
-        }]
-        index.upsert(vectors=processed_data, namespace="ns1")
-        
-        return jsonify({
-            "message": "Text embedded and stored successfully",
-            "upload_session_id": upload_session_id,
-            "summaries": []  # Include summaries if you generate them
-        }), 200
+        return jsonify({"extracted_text": extracted_text}), 200
 
     except Exception as e:
-        return jsonify({"error": f"Error embedding text: {str(e)}"}), 500
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred during text extraction"}), 500
+    
 
 
 @app.route('/upload', methods=['POST'])
@@ -213,6 +211,8 @@ def summarize_file():
 
     except Exception as e:
         return jsonify({"error": f"Error processing input: {str(e)}"}), 500
+    
+    
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
