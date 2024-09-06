@@ -134,6 +134,30 @@ def embed_text():
     except Exception as e:
         return jsonify({"error": f"Error embedding text: {str(e)}"}), 500
 
+#Remove Duplicates
+import re
+
+def removeDuplicateContent(text):
+    # Split the text into sentences or lines
+    sentences = re.split(r'(?<=[.!?]) +', text)
+
+    # Use a set to keep track of unique sentences
+    unique_sentences = set()
+    deduplicated_sentences = []
+
+    for sentence in sentences:
+        # Strip leading/trailing whitespace and check if the sentence is unique
+        cleaned_sentence = sentence.strip()
+        if cleaned_sentence not in unique_sentences:
+            deduplicated_sentences.append(cleaned_sentence)
+            unique_sentences.add(cleaned_sentence)
+
+    # Join the deduplicated sentences back into a single string
+    return " ".join(deduplicated_sentences)
+
+
+
+
 @app.route('/flashcards', methods=['POST'])
 def flashcards():
     text_content = request.form.get('text_content')
@@ -215,6 +239,70 @@ def upload_file():
         
     except Exception as e:
         return jsonify({"error": f"Error processing file: {str(e)}"}), 500
+    
+
+
+# Query Pinecone based on user's question and session ID
+@app.route('/query', methods=['POST'])
+def query_pinecone():
+    data = request.get_json()
+    question = data.get('question')
+    session_id = data.get('session_id')
+
+
+ 
+    if not question or not session_id:
+        return jsonify({"error": "Question or session_id missing"}), 400
+    
+    try:
+        # Generate embedding for the question
+        embedding = model.encode(question).tolist()
+        
+        # Query Pinecone
+        results = index.query(vector=embedding,
+            namespace="ns1",
+            top_k=3,
+            include_metadata=True,
+            filter={"upload_session_id": session_id})
+      
+        # Format the results
+         # Collect metadata from the result chunks
+        response_data = []
+        combined_summary = []
+       
+        for match in results.get('matches', []):
+            # Safely access metadata fields with defaults
+            chunk_number = match.get('metadata', {}).get('chunk_number', "N/A")
+            file_name = match.get('metadata', {}).get('file_name', "N/A")
+            score = match.get('score', "N/A")
+
+            response_data.append({
+                "chunk_number": chunk_number,
+                "file_name": file_name,
+                "score": score
+            })
+
+            # Append chunk contents (assuming you have access to the text for each chunk)
+            # Example: You could use some function to fetch the text for each chunk
+            # combined_summary.append(get_chunk_text(match['id']))  # Hypothetical function
+
+        # Combine the chunks into one summary
+        combined_text = " ".join(combined_summary)  # This is your merged text
+
+        # Deduplicate the content (if necessary)
+        final_summary = removeDuplicateContent(combined_text)  # Hypothetical deduplication function
+        
+        # Format the response
+        return jsonify({
+            "message": "Query successful",
+            "results": response_data,
+            "summary": final_summary
+        }), 200
+
+    except Exception as e:
+        print(f"Detailed error: {e}")  # Add this line for detailed error logging
+        return jsonify({"error": f"Error querying Pinecone: {str(e)}"}), 500
+#Summarize       
 
 @app.route('/summarize', methods=['POST'])
 def summarize_file():

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Button,
   Card,
@@ -10,10 +10,15 @@ import {
   Alert,
   Box,
   Grid,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
+import SendIcon from "@mui/icons-material/Send";
 import CardActionArea from "@mui/material/CardActionArea";
 
 export default function FileUploadSummarize() {
@@ -27,6 +32,19 @@ export default function FileUploadSummarize() {
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [uploadSessionId, setUploadSessionId] = useState("");
   const [flipped, setFlipped] = useState([]);
+  const [message, setMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     console.log("Flashcards state updated:", flashcards);
@@ -139,10 +157,7 @@ export default function FileUploadSummarize() {
         body: formData,
       });
 
-      console.log("Received response from server");
       const data = await response.json();
-      console.log("Parsed response data:", data);
-
       if (data.flashcards && Array.isArray(data.flashcards)) {
         console.log("Setting flashcards state:", data.flashcards);
         setFlashcards(data.flashcards);
@@ -163,6 +178,79 @@ export default function FileUploadSummarize() {
     setFlipped((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
+  };
+
+  const handleChat = async () => {
+    if (!uploadSessionId || !message.trim()) {
+      console.error("No session ID available or empty message");
+      return;
+    }
+
+    setIsSendingMessage(true);
+
+    try {
+      const response = await fetch("/api/chat_agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          session_id: uploadSessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      // Add user message immediately
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { type: "user", content: message },
+      ]);
+
+      let aiResponse = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        aiResponse += chunk;
+
+        // Update AI response in real-time
+        setChatMessages((prevMessages) => {
+          const lastMessage = prevMessages[prevMessages.length - 1];
+
+          // If the last message is from AI, update its content with the new chunk
+          if (lastMessage?.type === "ai") {
+            lastMessage.content += chunk; // Append the new chunk to the existing content
+            return [...prevMessages];
+          } else {
+            // If no previous AI message, add a new one
+            return [...prevMessages, { type: "ai", content: chunk }];
+          }
+        });
+      }
+
+      // Clear the message input
+      setMessage("");
+    } catch (error) {
+      console.error("Chat error:", error);
+      // Add an error message to chat history
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          type: "error",
+          content: "An error occurred while sending the message.",
+        },
+      ]);
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   return (
@@ -376,8 +464,93 @@ export default function FileUploadSummarize() {
             <Card sx={{ mt: 2 }}>
               <CardHeader title="Chat with your document" />
               <CardContent>
-                {/* Implement chat interface here */}
-                <p>Chat</p>
+                <div>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      height: "500px",
+                      maxWidth: "800px",
+                      margin: "auto",
+                    }}
+                  >
+                    <Typography variant="h6" component="h2" gutterBottom>
+                      Chat with your document
+                    </Typography>
+                    <div ref={messagesEndRef} />
+                    <Paper
+                      elevation={3}
+                      sx={{ flexGrow: 1, overflow: "auto", mb: 2, p: 2 }}
+                    >
+                      <List>
+                        {chatMessages.map((msg, index) => (
+                          <ListItem
+                            key={index}
+                            sx={{
+                              justifyContent:
+                                msg.type === "user" ? "flex-end" : "flex-start",
+                              mb: 1,
+                            }}
+                          >
+                            <Paper
+                              elevation={1}
+                              sx={{
+                                p: 1,
+                                backgroundColor:
+                                  msg.type === "user" ? "#e3f2fd" : "#f1f8e9",
+                                maxWidth: "70%",
+                              }}
+                            >
+                              <ListItemText
+                                primary={msg.type === "user" ? "You" : "AI"}
+                                secondary={msg.content}
+                                primaryTypographyProps={{
+                                  fontWeight: "bold",
+                                  color:
+                                    msg.type === "user"
+                                      ? "primary"
+                                      : "secondary",
+                                }}
+                              />
+                            </Paper>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Ask something about your uploaded data..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChat();
+                          }
+                        }}
+                        disabled={isSendingMessage}
+                        sx={{ mr: 1 }}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        endIcon={
+                          isSendingMessage ? (
+                            <CircularProgress size={24} />
+                          ) : (
+                            <SendIcon />
+                          )
+                        }
+                        onClick={handleChat}
+                        disabled={isSendingMessage || !message.trim()}
+                      >
+                        Send
+                      </Button>
+                    </Box>
+                  </Box>
+                </div>
               </CardContent>
             </Card>
           )}
