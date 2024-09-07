@@ -11,6 +11,9 @@ from flask_cors import CORS
 from urllib.parse import urlparse, unquote
 from transformers import BartTokenizer, BartForConditionalGeneration
 from typing import List
+from gtts import gTTS
+from io import BytesIO
+import base64
 
 # Load environment variables from .env file
 load_dotenv()
@@ -304,6 +307,13 @@ def query_pinecone():
         return jsonify({"error": f"Error querying Pinecone: {str(e)}"}), 500
 #Summarize       
 
+def generate_audio(text):
+    tts = gTTS(text=text, lang='en')
+    fp = BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return fp
+
 @app.route('/summarize', methods=['POST'])
 def summarize_file():
     text_content = request.form.get('text_content')
@@ -328,11 +338,21 @@ def summarize_file():
             text_chunks = [text_content]
         
         summaries = old_summarization_pipeline(text_chunks)
-        return jsonify({"summaries": summaries}), 200
+        summary_text = " ".join(summaries)
+        
+        # Generate audio
+        audio_fp = generate_audio(summary_text)
+        audio_data = audio_fp.getvalue()
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+        
+        return jsonify({
+            "summaries": summaries,
+            "audio": audio_base64
+        }), 200
 
     except Exception as e:
         return jsonify({"error": f"Error processing input: {str(e)}"}), 500
-    
+
     
 
 if __name__ == '__main__':

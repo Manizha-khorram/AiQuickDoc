@@ -74,8 +74,9 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: true,
-        message: "File uploaded and summarized successfully",
+        message: "File processed successfully",
         summaries: summaryData.summaries,
+        audio: summaryData.audio,
         fileName: file ? file.name : undefined,
       },
       { status: 200 }

@@ -19,6 +19,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import SendIcon from "@mui/icons-material/Send";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import StopIcon from "@mui/icons-material/Stop";
 import CardActionArea from "@mui/material/CardActionArea";
 
 export default function FileUploadSummarize() {
@@ -28,13 +30,16 @@ export default function FileUploadSummarize() {
   const [summary, setSummary] = useState("");
   const [flashcards, setFlashcards] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [audioData, setAudioData] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [uploadSessionId, setUploadSessionId] = useState("");
   const [flipped, setFlipped] = useState([]);
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [audioPlayer, setAudioPlayer] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -123,7 +128,8 @@ export default function FileUploadSummarize() {
       const data = await response.json();
 
       if (data.success) {
-        setSummary(data.summaries);
+        setSummary(data.summaries.join(" "));
+        setAudioData(data.audio);
       } else {
         setSummary("Summarization failed: " + data.message);
       }
@@ -134,6 +140,44 @@ export default function FileUploadSummarize() {
       setIsSummarizing(false);
     }
   };
+
+  const playAudio = () => {
+    if (!audioData || isPlayingAudio) return;
+
+    const audio = new Audio(`data:audio/mp3;base64,${audioData}`);
+    audio.onended = () => {
+      setIsPlayingAudio(false);
+      setAudioPlayer(null);
+    };
+    audio
+      .play()
+      .then(() => {
+        setIsPlayingAudio(true);
+        setAudioPlayer(audio);
+      })
+      .catch((error) => {
+        console.error("Error playing audio:", error);
+        setIsPlayingAudio(false);
+      });
+  };
+
+  const stopAudio = () => {
+    if (audioPlayer) {
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+      setIsPlayingAudio(false);
+      setAudioPlayer(null);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+      }
+    };
+  }, [audioPlayer]);
 
   const generateFlashcards = async () => {
     if (!file && !text) {
@@ -340,11 +384,25 @@ export default function FileUploadSummarize() {
               <Typography variant="body1">{uploadStatus}</Typography>
             </Alert>
           )}
-
           {summary && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="h6">Summary</Typography>
               <Typography variant="body1">{summary}</Typography>
+              {audioData && (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    onClick={isPlayingAudio ? stopAudio : playAudio}
+                    startIcon={
+                      isPlayingAudio ? <StopIcon /> : <PlayArrowIcon />
+                    }
+                    variant="contained"
+                    color={isPlayingAudio ? "secondary" : "primary"}
+                    sx={{ mr: 1 }}
+                  >
+                    {isPlayingAudio ? "Stop" : "Play Summary"}
+                  </Button>
+                </Box>
+              )}
             </Alert>
           )}
 
