@@ -70,12 +70,12 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
+    console.log("summaryData", summaryData.su);
     return NextResponse.json(
       {
         success: true,
         message: "File processed successfully",
-        summaries: summaryData.summaries,
+        summaries: summaryData.summary,
         audio: summaryData.audio,
         fileName: file ? file.name : undefined,
       },
