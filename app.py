@@ -14,35 +14,38 @@ from typing import List
 from gtts import gTTS
 from io import BytesIO
 import base64
+import google.generativeai as genai
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-model = SentenceTransformer('intfloat/multilingual-e5-large')
+embeddingModel = SentenceTransformer('intfloat/multilingual-e5-large')
 
-# Initialize summarization model
-tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
-bart_model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn')
 
-def old_summarization_pipeline(text: List[str]) -> List[str]:
-    input_ids = tokenizer.batch_encode_plus(
-        text, 
-        truncation=True, 
-        padding=True, 
-        return_tensors='pt', 
-        max_length=1024
-    )['input_ids']
+# Gemini API Configuration
+genai.configure(api_key=os.environ["Gemini_API_Key"])
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+
+# def old_summarization_pipeline(text: List[str]) -> List[str]:
+#     input_ids = tokenizer.batch_encode_plus(
+#         text, 
+#         truncation=True, 
+#         padding=True, 
+#         return_tensors='pt', 
+#         max_length=1024
+#     )['input_ids']
     
-    summary_ids = bart_model.generate(input_ids)
+#     summary_ids = bart_model.generate(input_ids)
     
-    summaries = [
-        tokenizer.decode(s, skip_special_tokens=True, clean_up_tokenization_spaces=True) 
-        for s in summary_ids
-    ]
+#     summaries = [
+#         tokenizer.decode(s, skip_special_tokens=True, clean_up_tokenization_spaces=True) 
+#         for s in summary_ids
+#     ]
     
-    return summaries
+#     return summaries
 
 # Configure AWS S3
 s3 = boto3.client(
@@ -115,7 +118,7 @@ def embed_text():
         upload_session_id = str(uuid.uuid4())
         
         # Embed the text using the SentenceTransformer model
-        embedding = model.encode(text).tolist()
+        embedding = embeddingModel.encode(text).tolist()
         
         # Store the embedding in Pinecone
         processed_data = [{
@@ -221,7 +224,7 @@ def upload_file():
         
         # Upload original text chunks to Pinecone
         for i, chunk in enumerate(chunks):
-            embedding = model.encode(chunk).tolist()
+            embedding = embeddingModel.encode(chunk).tolist()
             processed_data = [{
                 "values": embedding,
                 "id": f"{upload_session_id}_{os.path.basename(object_key)}_chunk_{i}",
@@ -259,7 +262,7 @@ def query_pinecone():
     
     try:
         # Generate embedding for the question
-        embedding = model.encode(question).tolist()
+        embedding = embeddingModel.encode(question).tolist()
         
         # Query Pinecone
         results = index.query(vector=embedding,
@@ -314,11 +317,13 @@ def generate_audio(text):
     fp.seek(0)
     return fp
 
+
 @app.route('/summarize', methods=['POST'])
 def summarize_file():
     text_content = request.form.get('text_content')
     file_url = request.form.get('file_url')
-    
+    print('text', file_url)
+    print('text', text_content)
     if not file_url and not text_content:
         return jsonify({"error": "No file URL or text provided"}), 400
 
@@ -333,24 +338,34 @@ def summarize_file():
             pdf_bytes = response['Body'].read()
 
             text_chunks = extract_text_from_pdf(pdf_bytes)
+            combined_text = " ".join(text_chunks)
         else:
             # Handle text summarization
-            text_chunks = [text_content]
-        
-        summaries = old_summarization_pipeline(text_chunks)
-        summary_text = " ".join(summaries)
+            combined_text = text_content
+            print('combinedtext', combined_text)
+        # Use Gemini for summarization
+        prompt = f"Summarize the following text concisely:\n\n{combined_text}\n\nSummary:"
+        response = model.generate_content(prompt)
+        print('res', response)
+        summary_text = response.text
+        print("Gemini Summary:", summary_text)  # Debug print
         
         # Generate audio
-        audio_fp = generate_audio(summary_text)
-        audio_data = audio_fp.getvalue()
-        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+        try:
+            audio_fp = generate_audio(summary_text)
+            audio_data = audio_fp.getvalue()
+            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+        except Exception as audio_error:
+            print(f"Audio generation error: {str(audio_error)}")
+            audio_base64 = None
         
         return jsonify({
-            "summaries": summaries,
+            "summary": summary_text,
             "audio": audio_base64
         }), 200
 
     except Exception as e:
+        print(f"Error during summarization: {str(e)}")
         return jsonify({"error": f"Error processing input: {str(e)}"}), 500
 
     
