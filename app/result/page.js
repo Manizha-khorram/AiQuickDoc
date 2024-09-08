@@ -47,7 +47,7 @@ export default function ResultPage() {
              <Box sx={{mt: 3, ml: 10, bgcolor: 'transparent'}}>
                 <Button
                 variant="outline"
-                color="success"
+                color="white"
                 onClick={back}>
                     BACK
                 </Button>        

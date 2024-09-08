@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { School, Science } from '@mui/icons-material';
 import { keyframes } from '@emotion/react';
 import MenuIcon from '@mui/icons-material/Menu';
+import getStripe from "@/utils/get-stripe";
 
 const glowAnimation = keyframes`
   0% {
@@ -493,6 +494,31 @@ const UseCaseCard = ({ useCase, index }) => {
 
 const PricingCard = ({ plan, index }) => {
   const [isHovered, setIsHovered] = useState(false);
+  // Stripe
+  const handleSubmit = async () => {
+    const checkoutSession = await fetch('/api/checkout_sessions', {
+      method: 'POST',
+      headers: {
+        origin: 'http://localhost:3000',
+      },
+    })
+
+    const checkoutSessionJson = await checkoutSession.json()
+    
+    if (checkoutSession.statusCode === 500){
+      console.error(checkoutSession.message)
+      return
+    }
+
+    const stripe = await getStripe()
+    const {error} = await stripe.redirectToCheckout({
+      sessionId: checkoutSessionJson.id, 
+    })
+
+    if (error) {
+      console.warn(error.message)
+    }
+  }
 
   return (
     <Zoom in={true} style={{ transitionDelay: `${index * 500}ms` }}>
@@ -581,9 +607,13 @@ const PricingCard = ({ plan, index }) => {
               ))}
             </List>
           </Box>
-          <Button variant="contained" size="large" fullWidth>
-            Get Started
-          </Button>
+          {plan.name == 'Basic' ?  
+          <SignInButton mode="modal">
+            <Button variant="contained" size="large" fullWidth >Get Started</Button>
+          </SignInButton>
+          : 
+          <Button variant="contained" size="large" fullWidth onClick={handleSubmit}>Get Started</Button>
+          }
         </Paper>
       </Box>
     </Zoom>
@@ -762,6 +792,7 @@ const Home = () => {
       features: ['Unlimited conversions', 'Advanced AI Q&A', 'Priority support', 'Integration with APIs'],
     },
   ];
+
 
   const theme = React.useMemo(
     () =>

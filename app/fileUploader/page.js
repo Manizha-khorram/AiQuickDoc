@@ -62,6 +62,7 @@ export default function FileUploadSummarize() {
   const [audioData, setAudioData] = useState("");
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioPlayer, setAudioPlayer] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -211,6 +212,7 @@ export default function FileUploadSummarize() {
 
       if (data.success) {
         setSummary(data.summaries);
+        setAudioData(data.audio);
       } else {
         setSummary("Summarization failed: " + data.message);
       }
@@ -595,17 +597,21 @@ export default function FileUploadSummarize() {
                     <Typography variant="body1">{summary}</Typography>
                     {/* AUDIO GOES HERE */}
                     {audioData && (
-                      <Box sx={{ mt: 1 }}>
+                      <Box sx={{ position: 'absolute', bottom: 10, right: 10 }}>
                         <Button
                           onClick={isPlayingAudio ? stopAudio : playAudio}
-                          startIcon={
-                            isPlayingAudio ? <StopIcon /> : <PlayArrowIcon />
-                          }
                           variant="contained"
                           color={isPlayingAudio ? "secondary" : "primary"}
-                          sx={{ mr: 1 }}
+                          size="small"
+                          sx={{
+                            minWidth: 'auto',
+                            borderRadius: '20%',
+                            width: 40,
+                            height: 40,
+                            p: 0,
+                          }}
                         >
-                          {isPlayingAudio ? "Stop" : "Play Summary"}
+                          {isPlayingAudio ?  <StopIcon />  : <PlayArrowIcon />}
                         </Button>
                       </Box>
                     )}
