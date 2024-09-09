@@ -134,6 +134,7 @@ export default function FileUploadSummarize() {
       });
 
       const data = await response.json();
+      console.log("summery", data);
 
       if (data.success) {
         setSummary(data.summaries);
@@ -153,6 +154,7 @@ export default function FileUploadSummarize() {
   };
 
   const handleChat = async () => {
+    console.log("handleChat function called");
     if (!summary || !message.trim()) {
       console.error("No summary available or empty message");
       return;
@@ -166,8 +168,7 @@ export default function FileUploadSummarize() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message:
-            "Greet user EXACTLY like this: 'Hello, I'm your AiQuickDoc Assistant! I'm eager to help you understand the content of your file. Let's dive in! Is there anything specific you'd like to know?' DO NOT add anything beyond this greeting!",
+          message,
           summary,
         }),
       });
@@ -192,6 +193,7 @@ export default function FileUploadSummarize() {
         const chunk = decoder.decode(value, { stream: true });
         aiResponse += chunk;
 
+        console.log("response", aiResponse);
         setChatMessages((prevMessages) => {
           const lastMessage = prevMessages[prevMessages.length - 1];
 

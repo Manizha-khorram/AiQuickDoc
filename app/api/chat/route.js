@@ -15,13 +15,15 @@ Instructions:
 - DO NOT mention any technical details about how the summary was generated or stored.
 `;
 
-// Initialize GROQ API
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
 export async function POST(req) {
+  console.log("Received request in backend");
   const { message, summary } = await req.json();
+  console.log("Received message:", message);
+  console.log("Received summary:", summary);
 
   if (!summary) {
     return NextResponse.json(
@@ -40,23 +42,28 @@ export async function POST(req) {
           ${summary}
           
           User Question: ${message}
-          
-          Please provide a response based on the above summary and question.
         `;
 
-        // Request streaming completion from GROQ API
+        console.log("Final Prompt:", finalPrompt); // Debugging line
+
         const completion = await groq.chat.completions.create({
           messages: [{ role: "user", content: finalPrompt }],
           model: "mixtral-8x7b-32768",
           stream: true,
         });
 
+        console.log("completion", completion);
+
+        let responseMessage = "";
+
         for await (const chunk of completion) {
           const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
-            controller.enqueue(content);
+            responseMessage += content;
           }
         }
+
+        controller.enqueue(responseMessage);
       } catch (error) {
         console.error("Error in chat route:", error);
         controller.enqueue("Error: " + error.message);

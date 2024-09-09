@@ -4,7 +4,7 @@ const getBackendUrl = () => {
     return process.env.NEXT_PUBLIC_BACKEND_URL;
   }
   if (process.env.NODE_ENV === "production") {
-    return "https://your-render-backend-url.onrender.com";
+    return "https://aiquickdoc-3f1m.onrender.com";
   }
   return "http://localhost:5000";
 };
