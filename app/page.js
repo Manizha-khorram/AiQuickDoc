@@ -608,12 +608,33 @@ const PricingCard = ({ plan, index }) => {
             </List>
           </Box>
           {plan.name == 'Basic' ?  
-          <SignInButton mode="modal">
-            <Button variant="contained" size="large" fullWidth >Get Started</Button>
-          </SignInButton>
-          : 
-          <Button variant="contained" size="large" fullWidth onClick={handleSubmit}>Get Started</Button>
+            <SignInButton mode="modal">
+              <Button variant="contained" size="large" fullWidth >Get Started</Button>
+            </SignInButton>
+            : 
+            <Button variant="contained" size="large" fullWidth onClick={handleSubmit}>Get Started</Button>
           }
+          {plan.name == 'Pro' ? (
+            <Typography
+            variant="h6"
+            sx={{
+              mt: 3,
+              fontWeight: 'bold',
+              color: '#fff',
+              textShadow: '0 0 10px #ff00de, 0 0 20px #ff00de, 0 0 30px #ff00de, 0 0 40px #ff00de',
+              padding: '10px 20px',
+              borderRadius: '10px',
+              // background: 'linear-gradient(45deg, #ff00de, #00e1ff)',
+              animation: `${glowAnimation} 2s ease-in-out infinite`,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.05)',
+              },
+            }}
+          >
+            COMING SOON!
+          </Typography>
+            ) : (<></>) }
         </Paper>
       </Box>
     </Zoom>
@@ -783,13 +804,13 @@ const Home = () => {
       name: 'Basic',
       price: 'Free',
       description: 'Perfect for students who need basic text conversion.',
-      features: ['5 conversions per month', 'Basic Q&A support', 'Community access'],
+      features: ['Unlimited conversions', 'Basic Q&A support', 'AI-Powered Summary Reader', 'Community access'],
     },
     {
       name: 'Pro',
       price: '$9.99/month',
       description: 'Ideal for power users who need more features.',
-      features: ['Unlimited conversions', 'Advanced AI Q&A', 'Priority support', 'Integration with APIs'],
+      features: ['All Basic Features', 'Advanced AI Q&A', 'Priority support', 'Save Features', 'AI Voice Conversations', 'Content Organization'],
     },
   ];
 
