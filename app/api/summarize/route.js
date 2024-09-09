@@ -30,8 +30,9 @@ export async function POST(request) {
 
       const uploadResult = await s3.upload(s3Params).promise();
       fileUrl = uploadResult.Location;
-      console.log(`File uploaded to S3: ${fileUrl}`);
+      console.log(`File uploaded to S3, here is the url: ${fileUrl}`);
 
+      console.log("Sending request to Flask backend");
       // Send PDF file URL to Flask for summarization
       const response = await fetch(`${BACKEND_URL}/summarize`, {
         method: "POST",
@@ -65,13 +66,13 @@ export async function POST(request) {
       }
 
       summaryData = await response.json();
+      console.log("summaryDataBackend", summaryData);
     } else {
       return NextResponse.json(
         { success: false, message: "No file or text provided" },
         { status: 400 }
       );
     }
-    console.log("summaryData", summaryData.su);
     return NextResponse.json(
       {
         success: true,
