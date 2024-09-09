@@ -67,12 +67,15 @@ export default function FileUploadSummarize() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [chatMessages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    if (fileUploaded && !hasGreeted) {
+      const greetingMessage = {
+        type: "ai",
+        content: "Hello! I'm your AI assistant. How can I help you with the uploaded file?"
+      };
+      setChatMessages([greetingMessage]);
+      setHasGreeted(true);
+    }
+  }, [fileUploaded, hasGreeted, chatMessages]);
 
   useEffect(() => {
     console.log("Flashcards state updated:", flashcards);
@@ -110,6 +113,7 @@ export default function FileUploadSummarize() {
 
     setUploadStatus("Chat initiated! You can now chat with your input.");
     setFileUploaded(true);
+    setActiveTab(2);
   };
 
   const summarizeFileOrText = async () => {
@@ -142,6 +146,7 @@ export default function FileUploadSummarize() {
         setSummaryGenerated(true);
         setFileUploaded(true);
         setUploadStatus("Summary generated successfully! You can now chat.");
+        setActiveTab(0);
       } else {
         setSummary("Summarization failed: " + data.message);
       }
@@ -292,6 +297,7 @@ export default function FileUploadSummarize() {
         console.log("Setting flashcards state:", data.flashcards);
         setFlashcards(data.flashcards);
         setUploadStatus("Flashcards generated successfully!");
+        setActiveTab(1);
       } else {
         console.error("Invalid flashcards data:", data);
         setUploadStatus("Flashcard generation failed: Invalid data format");
@@ -445,30 +451,6 @@ export default function FileUploadSummarize() {
                 <Grid item xs={12}>
                   <Button
                     variant="contained"
-                    color="primary"
-                    startIcon={
-                      isUploading ? (
-                        <CircularProgress size={24} />
-                      ) : (
-                        <ChatIcon />
-                      )
-                    }
-                    onClick={uploadFileOrText}
-                    disabled={isUploading || (!file && !text)}
-                    fullWidth
-                    sx={{
-                      borderRadius: "30px",
-                      textTransform: "none",
-                      fontWeight: 600,
-                      boxShadow: theme.shadows[2],
-                    }}
-                  >
-                    Chat with File
-                  </Button>
-                </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="contained"
                     color="success"
                     startIcon={
                       isGeneratingFlashcards ? (
@@ -490,6 +472,32 @@ export default function FileUploadSummarize() {
                     Generate Flashcards
                   </Button>
                 </Grid>
+
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={
+                      isUploading ? (
+                        <CircularProgress size={24} />
+                      ) : (
+                        <ChatIcon />
+                      )
+                    }
+                    onClick={uploadFileOrText}
+                    disabled={isUploading || (!file && !text)}
+                    fullWidth
+                    sx={{
+                      borderRadius: "30px",
+                      textTransform: "none",
+                      fontWeight: 600,
+                      boxShadow: theme.shadows[2],
+                    }}
+                  >
+                    Chat with File
+                  </Button>
+                </Grid>
+                
                 <Grid item xs={12}>
                   <Button
                     variant="outlined"
