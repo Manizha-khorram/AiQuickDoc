@@ -1,6 +1,7 @@
 import AWS from "aws-sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { BACKEND_URL } from "@/config";
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -58,7 +59,7 @@ export async function POST(request) {
       console.log(`File uploaded to S3: ${fileUrl}`);
 
       // Send PDF file URL to backend for text extraction
-      const response = await fetch("http://localhost:5000/flashcards", {
+      const response = await fetch(`${BACKEND_URL}/flashcards`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ file_url: fileUrl }),
