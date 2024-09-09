@@ -1,114 +1,70 @@
-import AWS from "aws-sdk";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import Groq from "groq-sdk";
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
+const systemPrompt = `
+System Prompt: AiQuickDoc agent
+Objective: Provide insights and responses based on the summary of the user's file or text.
+Instructions:
+- Use the provided summary to answer the user's questions in a conversational manner.
+- If the user asks what the text or document is about, provide a brief overview based on the summary.
+- Avoid repeating the same information multiple times in the response.
+- If the user asks about specific topics, provide more detailed information if available in the summary.
+- If the summary lacks details on a specific topic, inform the user and offer to explain the topic based on external knowledge.
+- If the user's question seems unrelated to the summary content, indicate that the question is unrelated but offer to provide additional information if needed.
+- Keep responses brief, concise, and friendly.
+- DO NOT mention any technical details about how the summary was generated or stored.
+`;
+
+// Initialize GROQ API
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const s3 = new AWS.S3();
+export async function POST(req) {
+  const { message, summary } = await req.json();
 
-export async function POST(request) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const text = formData.get("text"); // Get the text input
-
-    // If text input is provided, send it to the backend for embedding and storing in Pinecone
-    if (text) {
-      const response = await fetch("http://localhost:5000/embed_text", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          text,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("HTTP Error:", errorText);
-        return NextResponse.json(
-          {
-            success: false,
-            message: "An error occurred during the text processing",
-          },
-          { status: 500 }
-        );
-      }
-
-      const data = await response.json();
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Text processed successfully",
-          upload_session_id: data.upload_session_id,
-          summaries: data.summaries,
-        },
-        { status: response.status }
-      );
-    }
-
-    // Handle file upload if a file is provided
-    if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-
-      const s3Params = {
-        Bucket: process.env.S3_BUCKET_NAME,
-        Key: `uploads/${file.name}`,
-        Body: buffer,
-        ContentType: file.type,
-      };
-
-      const uploadResult = await s3.upload(s3Params).promise();
-      console.log(`File uploaded to S3: ${uploadResult.Location}`);
-
-      const response = await fetch("http://localhost:5000/upload", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          file_url: uploadResult.Location,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("HTTP Error:", errorText);
-        return NextResponse.json(
-          {
-            success: false,
-            message: "An error occurred during the file processing",
-          },
-          { status: 500 }
-        );
-      }
-
-      const data = await response.json();
-      return NextResponse.json(
-        {
-          success: true,
-          message: "File processed successfully",
-          upload_session_id: data.upload_session_id,
-          fileName: data.fileName,
-          summaries: data.summaries,
-        },
-        { status: response.status }
-      );
-    }
-
+  if (!summary) {
     return NextResponse.json(
-      { success: false, message: "No text or file provided" },
+      { success: false, message: "No summary provided" },
       { status: 400 }
     );
-  } catch (error) {
-    console.error("Fetch Error:", error);
-    return NextResponse.json(
-      { success: false, message: "An error occurred during the fetch" },
-      { status: 500 }
-    );
   }
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const finalPrompt = `
+          ${systemPrompt}
+          
+          Document Summary:
+          ${summary}
+          
+          User Question: ${message}
+          
+          Please provide a response based on the above summary and question.
+        `;
+
+        // Request streaming completion from GROQ API
+        const completion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: finalPrompt }],
+          model: "mixtral-8x7b-32768",
+          stream: true,
+        });
+
+        for await (const chunk of completion) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            controller.enqueue(content);
+          }
+        }
+      } catch (error) {
+        console.error("Error in chat route:", error);
+        controller.enqueue("Error: " + error.message);
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new NextResponse(stream);
 }
