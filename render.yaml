@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: nextjs-app
+    env: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: python-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api.main:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.14
