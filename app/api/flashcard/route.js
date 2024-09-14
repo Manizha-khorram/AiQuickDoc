@@ -1,15 +1,7 @@
-import AWS from "aws-sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { BACKEND_URL } from "@/config";
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
-
-const s3 = new AWS.S3();
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 const model = genAI.getGenerativeModel({
@@ -46,23 +38,12 @@ export async function POST(request) {
     let extractedText = "";
 
     if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const s3Params = {
-        Bucket: process.env.S3_BUCKET_NAME,
-        Key: `uploads/${file.name}`,
-        Body: buffer,
-        ContentType: file.type,
-      };
+      const form = new FormData();
+      form.append("file", file);
 
-      const uploadResult = await s3.upload(s3Params).promise();
-      const fileUrl = uploadResult.Location;
-      console.log(`File uploaded to S3: ${fileUrl}`);
-
-      // Send PDF file URL to backend for text extraction
       const response = await fetch(`${BACKEND_URL}/flashcards`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ file_url: fileUrl }),
+        body: form,
       });
 
       if (!response.ok) {
@@ -80,7 +61,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
     // Generate flashcards based on the extracted text
     const prompt = `${systemPrompt}\n${extractedText}`;
     const result = await model.generateContent(prompt);
