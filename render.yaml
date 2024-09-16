@@ -12,7 +12,8 @@ services:
     name: python-api
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --timeout 300 api.app:app
+    startCommand: gunicorn api.app:app --timeout 999 --workers=3 --threads=3 --worker-connections=1000
+
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.14
