@@ -70,7 +70,8 @@ export default function FileUploadSummarize() {
     if (fileUploaded && !hasGreeted) {
       const greetingMessage = {
         type: "ai",
-        content: "Hello! I'm your AI assistant. How can I help you with the uploaded file?"
+        content:
+          "Hello! I'm your AI assistant. How can I help you with the uploaded file?",
       };
       setChatMessages([greetingMessage]);
       setHasGreeted(true);
@@ -497,7 +498,7 @@ export default function FileUploadSummarize() {
                     Chat with File
                   </Button>
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <Button
                     variant="outlined"
