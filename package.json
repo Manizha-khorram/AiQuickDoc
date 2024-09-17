@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "engines": {
-    "node": ">=18"
+    "node": "18.17.0"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.3.7",
