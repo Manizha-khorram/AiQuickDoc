@@ -107,17 +107,18 @@ def summarize_file():
         response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
             max_output_tokens=8192  # Gemini Flash output token limit
         ))
+
         summary_text = response.text
 
-        result = {"summary": summary_text}
+        # Generate audio
+        audio_fp = generate_audio(summary_text)
+        audio_data = audio_fp.getvalue()
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 
-        if generate_audio_flag:
-            audio_fp = generate_audio(summary_text)
-            audio_data = audio_fp.getvalue()
-            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            result["audio"] = audio_base64
-
-        return jsonify(result), 200
+        return jsonify({
+            "summary": summary_text,
+            "audio": audio_base64
+        }), 200
 
     except genai.GenerateContentError as e:
         print(f"Gemini API error: {str(e)}")
@@ -127,6 +128,8 @@ def summarize_file():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    # port = int(os.environ.get('PORT', 5000))
+    # app.run(host='0.0.0.0', port=port)
+
+     app.run(debug= True, port= 5000)
    

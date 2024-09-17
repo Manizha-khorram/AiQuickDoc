@@ -12,6 +12,7 @@ import {
   Box,
   Grid,
   List,
+  Tooltip,
   ListItem,
   ListItemText,
   Paper,
@@ -21,6 +22,7 @@ import {
   Tab,
   useTheme,
   useMediaQuery,
+  Stack,
 } from "@mui/material";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
@@ -962,10 +964,35 @@ export default function FileUploadSummarize() {
           <Typography variant="body1" align="center">
             © 2024 AIQuickDoc. All rights reserved.
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center">
-            Crafted with ❤️ by Edom Belayneh, Helena Tesfaye, Manizha Khorram,
-            Mino Ralison.
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            align="center"
+            sx={{ mt: 1, mb: 2 }}
+          >
+            Crafted with ❤️ by
           </Typography>
+          <Stack
+            direction="row"
+            spacing={2}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Tooltip title="Manizha Khorram" arrow>
+              <Avatar
+                alt="Manizha Khorram"
+                src="/Manizha.jpeg"
+                sx={{ width: 40, height: 40 }}
+              />
+            </Tooltip>
+            <Tooltip title="Edom Belayneh" arrow>
+              <Avatar
+                alt="Edom Belayneh"
+                src="/Edom.jpeg"
+                sx={{ width: 40, height: 40 }}
+              />
+            </Tooltip>
+          </Stack>
         </Container>
       </Box>
     </Box>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Container, AppBar, Toolbar, Typography, Button, Box, Grid, Paper, IconButton, CssBaseline,
-  useMediaQuery, Grow, Zoom, List, ListItem, ListItemIcon, ListItemText,  Menu, MenuItem
+  useMediaQuery, Grow, Zoom, List, ListItem, ListItemIcon, ListItemText,  Menu, MenuItem, Tooltip, Avatar, Stack
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
@@ -1234,20 +1234,48 @@ const Home = () => {
       
 
       {/* Footer */}
-      <Box component="footer" 
+      <Box
+        component="footer"
         sx={{
           py: 4,
           px: 2,
-          mt: 'auto',
-          bgcolor: 'background.paper',
-        }}>
+          mt: "auto",
+          bgcolor: "background.paper",
+        }}
+      >
         <Container maxWidth="lg">
           <Typography variant="body1" align="center">
             © 2024 AIQuickDoc. All rights reserved.
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center">
-           Crafted with ❤️ by Edom Belayneh, Helena Tesfaye, Manizha Khorram, Mino Ralison.
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            align="center"
+            sx={{ mt: 1, mb: 2 }}
+          >
+            Crafted with ❤️ by
           </Typography>
+          <Stack
+            direction="row"
+            spacing={2}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Tooltip title="Manizha Khorram" arrow>
+              <Avatar
+                alt="Manizha Khorram"
+                src="/Manizha.jpeg"
+                sx={{ width: 40, height: 40 }}
+              />
+            </Tooltip>
+            <Tooltip title="Edom Belayneh" arrow>
+              <Avatar
+                alt="Edom Belayneh"
+                src="/Edom.jpeg"
+                sx={{ width: 40, height: 40 }}
+              />
+            </Tooltip>
+          </Stack>
         </Container>
       </Box>
       </SignedOut>
